@@ -2,7 +2,10 @@
 #include <windows.h>
 #include <fstream>
 #include <vector>
+#include <string>
 #include <semaphore>
+#include <sstream>
+#include <iomanip>
 
 #define MAX_THREADS 1000
 
@@ -27,38 +30,56 @@ DWORD processUpdaterID;
 
 int getProgress();
 void drawProgress();
+void to_int_vector(string s);
 void updProgress(int chunk_of_work);
-int min_on_vector(int threads_cnt, vector <int> &v);
+int min_on_vector(int threads_cnt);
 
 int main()
 {
-    int n;
-    ifstream fin("D:\\university\\2_kurs\\OS\\os_lab_4\\labcLion\\testsets\\test0.txt");
-    fin >> n;
-    int x;
-    vector < int > v;
-    for (int i = 0; i < n; i++) {
-        fin >> x;
-        v.push_back(x);
-    }
-    fin.close();
+    //int n;
+    string text, text_r;
+//    vector < int > v;
+
+    HANDLE file = CreateFileA("D:\\university\\2_kurs\\OS\\os_lab_4\\labcLion\\testsets\\test0.txt",
+                              GENERIC_READ,
+                              0, NULL,
+                              OPEN_EXISTING,
+                              FILE_ATTRIBUTE_NORMAL,
+                              NULL);
+
+
+    HANDLE mapping = CreateFileMapping(file,
+                                       0,
+                                       PAGE_READONLY,
+                                       0,
+                                       0,
+                                       NULL);
+
+    text_r = (char *)MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, 0);
+
+    CloseHandle(mapping);
+    CloseHandle(file);
+
+    to_int_vector(text_r);
 
     cout << "Enter number of threads:\n";
     cin >> threads_count;
-    cout << min_on_vector(threads_count, v) << endl;
+    cout << "Final answer: " << min_on_vector(threads_count) << endl;
 
     system("PAUSE");
     return 0;
 }
 
-int min_on_vector(int threads_cnt, vector <int> &v) {
-    a = v;
+int min_on_vector(int threads_cnt) {
+    //a = v;
     processLocker.lock();
     int n = a.size();
     threads_count = threads_cnt;
     processLocker.unlock();
 
     step = n / threads_count;
+
+    auto start = std::chrono::steady_clock::now();
 
     HANDLE processUpdater;
     processUpdater = CreateThread(
@@ -92,6 +113,12 @@ int min_on_vector(int threads_cnt, vector <int> &v) {
 
     WaitForSingleObject(processUpdater, INFINITE);
     CloseHandle(processUpdater);
+
+    auto end = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end - start;
+
+    cout << fixed << setprecision(10);
+    cout << "\n Entire time: " << elapsed_seconds.count() << "s\n";
 
     return final_ans;
 }
@@ -168,4 +195,22 @@ void updProgress(int chunk_of_work) {
     processLocker.lock();
     completed_work += chunk_of_work;
     processLocker.unlock();
+}
+
+void to_int_vector(string s) {
+    string temp;
+    for (int i = 0; i < s.size(); i++) {
+        if (s[i] == '\n' || s[i] == '\0' ||s[i] == ' ') {
+
+            int x;
+            stringstream ss;
+            ss << temp;
+            ss >> x;
+            a.push_back(x);
+            temp = "";
+        }
+        else {
+            temp += s[i];
+        }
+    }
 }
